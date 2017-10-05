@@ -32,11 +32,24 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+func editHandler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, "YOOO")
+}
+
 func main() {
+    // Setup in memory session store for user tokens
+    sessionStore = make(map[string]Client)
+    
+
+    // Setup static router
 	fs := http.FileServer(http.Dir("./assets"))
 	http.Handle("/assets/", http.StripPrefix("/assets/", fs))
+
+    // Setup non-dynamic routes
 	http.HandleFunc("/", frontpage)
-	http.HandleFunc("/login", login)
+	http.HandleFunc("/goldfish", ProcessLogin)
+    http.HandleFunc("/edit", Authenticate(editHandler))
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
