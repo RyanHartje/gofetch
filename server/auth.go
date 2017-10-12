@@ -4,6 +4,7 @@ import (
     "crypto/subtle"
     "fmt"
     "html/template"
+    "log"
     "net/http"
     "sync"
 
@@ -58,13 +59,8 @@ func (h AuthenticationMiddleware) ServeHTTP (w http.ResponseWriter, r *http.Requ
 	// Lastly, we need to set the cookie to the response writer, and handle redirects to either login or the original request uri
 	    http.SetCookie(w, cookie)
         if client.loggedIn == false {
-            t, _ := template.ParseFiles(
-                "templates/base.gtpl",
-                "templates/navbar.gtpl",
-                "templates/login.gtpl",
-            )
-
-            t.Execute(w, nil)
+            uri := "http://" + r.Host + "/login"
+            http.Redirect(w, r, uri, 301)
             return
         }
         if client.loggedIn == true {
@@ -79,51 +75,71 @@ func Authenticate(h http.Handler) AuthenticationMiddleware {
 }
 
 func ProcessLogin(w http.ResponseWriter, r *http.Request){
-    cookie, err := r.Cookie("session")
-    if err != nil {
-        if err != http.ErrNoCookie {
+    if r.Method == "GET" {
+        t, _ := template.ParseFiles(
+            "templates/base.gtpl",
+            "templates/navbar.gtpl",
+            "templates/login.gtpl",
+        )
+        if r.URL.Query().Get("success") != "" {
+            t.Execute(w, map[string]string{"Message": "Login failed. Please try again."})
+        } else {
+            t.Execute(w, nil)
+        }
+    } else {
+        cookie, err := r.Cookie("session")
+        if err != nil {
+            if err != http.ErrNoCookie {
+                fmt.Fprint(w, err)
+                return
+            } else {
+                err = nil
+            }
+        }
+        var present bool
+        var client Client
+        if cookie != nil {
+            storageMutex.RLock()
+            client, present = sessionStore[cookie.Value]
+            storageMutex.RUnlock()
+        } else {
+            present = false
+        }
+
+        if present == false {
+            cookie = &http.Cookie{
+                Name: "session",
+                Value: uuid.NewV4().String(),
+            }
+            client = Client{false}
+            storageMutex.Lock()
+            sessionStore[cookie.Value] = client
+            storageMutex.Unlock()
+        }
+        http.SetCookie(w, cookie)
+
+        err = r.ParseForm()
+        if err != nil {
             fmt.Fprint(w, err)
             return
+        }
+
+        // compare passwords here. definitely need to connect this to a datastore
+        if subtle.ConstantTimeCompare([]byte(r.FormValue("password")), []byte("testpass")) == 1 {
+            client.loggedIn = true
+            storageMutex.Lock()
+            sessionStore[cookie.Value] = client
+            storageMutex.Unlock()
+
+            // redirect to original page here
+            log.Println("Redirecting after login")
+            uri := "http://" + r.Host + "/edit"
+            http.Redirect(w, r, uri, 301)
         } else {
-            err = nil
+            // If their login failed, we need to present a msg to let the user know
+            uri := "http://" + r.Host + "/login?success=false"
+            http.Redirect(w, r, uri, 301)
         }
-    }
-    var present bool
-    var client Client
-    if cookie != nil {
-        storageMutex.RLock()
-        client, present = sessionStore[cookie.Value]
-        storageMutex.RUnlock()
-    } else {
-        present = false
-    }
-
-    if present == false {
-        cookie = &http.Cookie{
-            Name: "session",
-            Value: uuid.NewV4().String(),
-        }
-        client = Client{false}
-        storageMutex.Lock()
-        sessionStore[cookie.Value] = client
-        storageMutex.Unlock()
-    }
-    http.SetCookie(w, cookie)
-
-    err = r.ParseForm()
-    if err != nil {
-        fmt.Fprint(w, err)
-        return
-    }
-
-    if subtle.ConstantTimeCompare([]byte(r.FormValue("password")), []byte("testpass")) == 1 {
-        client.loggedIn = true
-        fmt.Fprintln(w, "Thank you for logging in.")
-        storageMutex.Lock()
-        sessionStore[cookie.Value] = client
-        storageMutex.Unlock()
-    } else {
-        fmt.Fprintln(w, "Wrong password.")
     }
 }
 

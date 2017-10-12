@@ -7,6 +7,10 @@ import (
 	"net/http"
 )
 
+type TemplateData struct{
+    Message string
+}
+
 func frontpage(w http.ResponseWriter, r *http.Request) {
 	t, _ := template.ParseFiles(
 		"templates/base.gtpl",
@@ -15,27 +19,6 @@ func frontpage(w http.ResponseWriter, r *http.Request) {
 	)
 	t.Execute(w, nil)
 }
-
-func login(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		t, _ := template.ParseFiles(
-			"templates/base.gtpl",
-			"templates/navbar.gtpl",
-			"templates/login.gtpl",
-		)
-
-		t.Execute(w, nil)
-	} else {
-		r.ParseForm()
-		fmt.Println("Parsing login for: ", r.Form["username"])
-
-	}
-}
-
-
-//func editHandler(w http.ResponseWriter, r *http.Request) {
-//    fmt.Fprintf(w, "YOOO")
-//}
 
 type editHandler struct{
 }

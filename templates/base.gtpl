@@ -20,7 +20,7 @@
   <body>
 
  {{ template "navbar" }}
- {{ template "content" }}
+ {{ template "content" . }}
 
 
     <!-- Bootstrap core JavaScript
