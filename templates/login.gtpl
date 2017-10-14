@@ -3,9 +3,16 @@
       <br>
       <br>
       <br>
+      <!--
       <img class="img-responsive center" src="/assets/images/gold.svg">
+      -->
       <form class="form-signin">
         <h2 class="form-signin-heading">Open your vault</h2>
+        {{- if .Message }}
+        <div class="alert alert-danger" role="alert">
+        {{ .Message }}
+        </div>
+        {{- end }} 
         <label for="username" class="sr-only">Username</label>
         <input type="text" id="username" class="form-control" placeholder="Username" required autofocus>
         <label for="password" class="sr-only">Password</label>
