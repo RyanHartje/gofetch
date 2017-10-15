@@ -13,30 +13,20 @@ podTemplate(label: 'mypod', containers: [
             container('docker') {
 
                     sh """
-                        docker pull ubuntu
-                        docker tag ubuntu ${env.DOCKER_HUB_USER}/ubuntu:${env.BUILD_NUMBER}
-                        """
-                    sh "docker login -u ${env.DOCKER_HUB_USER} -p ${env.DOCKER_HUB_PASSWORD} "
-                    sh "docker push ${env.DOCKER_HUB_USER}/ubuntu:${env.BUILD_NUMBER} "
+                        docker pull golang:1.9-alpine
+                       """
                 }
             }
         }
 
         stage('do some kubectl work') {
             container('kubectl') {
-
-                withCredentials([[$class: 'UsernamePasswordMultiBinding', 
-                        credentialsId: 'dockerhub',
-                        usernameVariable: 'DOCKER_HUB_USER',
-                        passwordVariable: 'DOCKER_HUB_PASSWORD']]) {
-                    
                     sh "kubectl get nodes"
                 }
             }
         }
         stage('do some helm work') {
             container('helm') {
-
                sh "helm ls"
             }
         }
